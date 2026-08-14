@@ -5,8 +5,8 @@ Override these in a transform when working on a different instance or prefix.
 
 PREFIX = "pert_modeling"
 
-COLLECTION_KEY = f"{PREFIX}/tahoe-lincs-harmonized"
-OVERLAP_KEY = f"{PREFIX}/compound_overlap.csv"
+COLLECTION_KEY = f"{PREFIX}/harmonized"
+OVERLAP_KEY = f"{PREFIX}/compounds.csv"
 TAHOE_HARMONIZED_KEY = f"{PREFIX}/tahoe_harmonized.h5ad"
 
 WEIGHTS_KEY = f"{PREFIX}/modlyn_perturbation_weights.parquet"

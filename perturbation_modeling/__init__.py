@@ -9,8 +9,10 @@ __version__ = "0.0.1"
 from .collection import (
     DatasetSpec,
     append_dataset,
-    build_overlap_collection,
-    tahoe_lincs_specs,
+    build_collection,
+    lincs_spec,
+    lincs_specs,
+    tahoe_spec,
 )
 from .compounds import normalize_compound
 from .enrichment import best_term_per_perturbation, enrich_top_genes

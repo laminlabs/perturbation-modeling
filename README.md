@@ -16,7 +16,30 @@ Connect LaminDB to `laminlabs/perturbation-modeling` or your own instance.
 
 ## Usage
 
-Reusable logic stays in `perturbation_modeling/`. Each analysis run is a thin script with `ln.track()` / `ln.finish()` that loads and saves LaminDB artifacts:
+Reusable logic stays in `perturbation_modeling/`. Each analysis run is a thin script with `ln.track()` / `ln.finish()` that loads and saves LaminDB artifacts.
+
+Build a collection from any mix of studies — Tahoe, LINCS, both, or only your own data:
+
+```python
+import lamindb as ln
+from perturbation_modeling import (
+    DatasetSpec,
+    build_collection,
+    lincs_specs,
+    tahoe_spec,
+)
+
+ln.track()
+# Tahoe + all LINCS phases, compounds restricted to the intersection:
+build_collection([tahoe_spec(), *lincs_specs()])
+# LINCS only (one or more phases):
+# build_collection(lincs_specs(sources=["lincs_phase2"]))
+# In-house only:
+# build_collection([DatasetSpec(uid_or_key="my.h5ad", source="inhouse", pert_col="drug")])
+ln.finish()
+```
+
+Train on whatever collection you saved:
 
 ```python
 import lamindb as ln
@@ -34,7 +57,7 @@ Extend the library when a step is reusable (a new gene-panel rule, another model
 
 ## Pipeline
 
-1. **Harmonize** Tahoe / LINCS / DRUG-seq (or any new study) onto a shared `perturbation` label and gene panel → `Collection`
+1. **Harmonize** any studies (Tahoe, LINCS, DRUG-seq, in-house) onto a shared `perturbation` label and gene panel → `Collection`
 2. **Train** a [modlyn](https://modlyn.lamin.ai/quickstart) `SimpleLogReg` on `MappedCollection`
 3. **Rank genes** per perturbation from classifier weights
 4. **Enrich** top genes (Enrichr) and write an interpretation report
@@ -43,16 +66,17 @@ Append a study with `append_dataset(DatasetSpec(...))` and retrain — no rebuil
 
 ## API
 
-| Task                                          | Import                                           |
-| --------------------------------------------- | ------------------------------------------------ |
-| Normalize compound names                      | `normalize_compound`                             |
-| Align one AnnData to the collection schema    | `harmonize_anndata`                              |
-| Build Tahoe+LINCS (or any overlap collection) | `build_overlap_collection`, `tahoe_lincs_specs`  |
-| Append DRUG-seq / in-house                    | `DatasetSpec`, `append_dataset`                  |
-| Train / retrain feature-selection model       | `train_feature_selection`                        |
-| Top genes from weights                        | `top_genes_from_weights`                         |
-| Enrichr on those genes                        | `enrich_top_genes`, `best_term_per_perturbation` |
-| Evidence markdown                             | `build_evidence_report`                          |
+| Task                                        | Import                                                   |
+| ------------------------------------------- | -------------------------------------------------------- |
+| Normalize compound names                    | `normalize_compound`                                     |
+| Align one AnnData to the collection schema  | `harmonize_anndata`                                      |
+| Describe a study                            | `DatasetSpec`, `tahoe_spec`, `lincs_spec`, `lincs_specs` |
+| Build a collection from any list of studies | `build_collection`                                       |
+| Append another study                        | `append_dataset`                                         |
+| Train / retrain feature-selection model     | `train_feature_selection`                                |
+| Top genes from weights                      | `top_genes_from_weights`                                 |
+| Enrichr on those genes                      | `enrich_top_genes`, `best_term_per_perturbation`         |
+| Evidence markdown                           | `build_evidence_report`                                  |
 
 Default artifact keys are in `perturbation_modeling.keys`. Override them in your script if the instance uses a different prefix.
 

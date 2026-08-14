@@ -6,15 +6,21 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 from perturbation_modeling import (
+    DatasetSpec,
     build_evidence_report,
     harmonize_anndata,
+    lincs_spec,
+    lincs_specs,
     normalize_compound,
+    tahoe_spec,
     top_genes_from_weights,
 )
+from perturbation_modeling.collection import overlap_compounds
 from perturbation_modeling.compounds import normalize_compound as _norm
 from perturbation_modeling.enrichment import best_term_per_perturbation, short_term
 from perturbation_modeling.features import rank_perturbations, recurrent_genes
 from perturbation_modeling.harmonize import align_to_gene_panel
+from perturbation_modeling.keys import LINCS_UIDS, TAHOE_UID
 
 
 def test_normalize_compound():
@@ -98,3 +104,35 @@ def test_enrichment_helpers_and_report():
     )
     assert "imatinib" in text
     assert "Caveats" in text
+
+
+def test_dataset_specs_are_independent():
+    t = tahoe_spec(max_obs=1000)
+    assert t.source == "tahoe"
+    assert t.uid_or_key == TAHOE_UID
+    assert t.pert_col == "drug"
+    assert t.symbol_col is None
+    assert t.max_obs == 1000
+
+    one = lincs_spec("lincs_phase2")
+    assert one.source == "lincs_phase2"
+    assert one.uid_or_key == LINCS_UIDS["lincs_phase2"]
+    assert one.pert_col == "pert_compound"
+    assert one.symbol_col == "pr_gene_symbol"
+
+    all_lincs = lincs_specs()
+    assert [s.source for s in all_lincs] == list(LINCS_UIDS)
+    subset = lincs_specs(sources=["lincs_phase1_delta"])
+    assert len(subset) == 1
+    assert subset[0].source == "lincs_phase1_delta"
+
+    custom = DatasetSpec(uid_or_key="my.h5ad", source="inhouse", pert_col="drug")
+    mixed = [t, one, custom]
+    assert [s.source for s in mixed] == ["tahoe", "lincs_phase2", "inhouse"]
+
+
+def test_overlap_compounds_one_or_many():
+    a = pd.Series(["Imatinib (mesylate)", "DMSO"])
+    b = pd.Series(["imatinib", "vehicle"])
+    assert overlap_compounds(a) == ["dmso", "imatinib"]
+    assert overlap_compounds(a, b) == ["imatinib"]
