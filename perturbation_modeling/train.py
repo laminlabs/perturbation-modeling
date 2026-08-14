@@ -12,14 +12,13 @@ from .keys import LABEL_COL, SOURCE_COL
 
 if TYPE_CHECKING:
     import lamindb as ln
-    import torch
 
 
 def collate_mapped(
     batch: list[dict[str, Any]],
     *,
     label_col: str = LABEL_COL,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[Any, Any]:
     """MappedCollection yields dicts; SimpleLogReg.training_step expects (x, y)."""
     import torch
 
