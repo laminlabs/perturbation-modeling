@@ -1,0 +1,18 @@
+"""Custom scripts of perturbation modeling.
+
+Import the package::
+
+   import perturbation_modeling
+
+This is the complete API reference:
+
+.. autosummary::
+   :toctree: .
+
+   example_function
+   ExampleClass
+"""
+
+__version__ = "0.0.1"  # denote a pre-release for 0.1.0 with 0.1rc1
+
+from ._core import ExampleClass, example_function
