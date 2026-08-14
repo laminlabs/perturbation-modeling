@@ -114,7 +114,7 @@ def build_overlap_collection(
 ) -> ln.Collection:
     """Intersect perturbation labels across studies, harmonize, save a Collection.
 
-    Gene panel is the intersection of symbols (``var_names`` or ``symbol_col``)
+    Gene panel is the intersection of symbols (var_names or symbol_col)
     across every spec. Each spec is subset to the compound overlap before save.
     """
     if len(specs) < 2:

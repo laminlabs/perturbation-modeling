@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 def focus_perturbations(best_terms: pd.DataFrame, n: int = 8) -> list[str]:
-    """Select the ``n`` perturbations with the strongest top Enrichr term."""
+    """Select the n perturbations with the strongest top Enrichr term."""
     ranked = best_terms.sort_values("Adjusted P-value").reset_index(drop=True)
     return ranked.head(n)["perturbation"].astype(str).tolist()
 
@@ -86,7 +86,7 @@ def build_evidence_report(
     title: str = "Perturbation feature-selection interpretation",
     extra_sections: list[str] | None = None,
 ) -> str:
-    """Assemble a markdown report; ``extra_sections`` is where an agent adds notes."""
+    """Assemble a markdown report; extra_sections is where an agent adds notes."""
     best = best_terms.drop(
         columns=[c for c in best_terms.columns if str(c).startswith("Unnamed")]
     )

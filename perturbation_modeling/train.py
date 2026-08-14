@@ -54,9 +54,9 @@ def train_feature_selection(
     learning_rate: float = 1e-1,
     weight_decay: float = 1e-3,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Fit modlyn SimpleLogReg on ``collection.mapped()``.
+    """Fit modlyn SimpleLogReg on collection.mapped().
 
-    Returns ``(weights, summary)``. ``weights`` is classes × genes; ``summary``
+    Returns (weights, summary). weights is classes × genes; summary
     is a one-row frame of training metadata.
     """
     import lightning as L

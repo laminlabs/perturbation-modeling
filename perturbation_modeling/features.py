@@ -6,7 +6,7 @@ import pandas as pd
 
 
 def prepare_weights(weights: pd.DataFrame, *, index_col: str = "index") -> pd.DataFrame:
-    """Ensure a classes × genes weight matrix with ``perturbation`` as the index."""
+    """Ensure a classes × genes weight matrix with perturbation as the index."""
     out = weights.copy()
     if index_col in out.columns:
         out = out.set_index(index_col)
@@ -16,7 +16,7 @@ def prepare_weights(weights: pd.DataFrame, *, index_col: str = "index") -> pd.Da
 
 
 def top_genes_from_weights(weights: pd.DataFrame, n: int = 50) -> pd.DataFrame:
-    """Long table of the top-``n`` genes (highest weight) per perturbation."""
+    """Long table of the top-n genes (highest weight) per perturbation."""
     W = prepare_weights(weights)
     rows: list[dict[str, object]] = []
     for pert, row in W.iterrows():
@@ -49,7 +49,7 @@ def recurrent_genes(
     perturbations: list[str],
     n: int = 40,
 ) -> list[str]:
-    """Genes that appear most often in the top-N lists of ``perturbations``."""
+    """Genes that appear most often in the top-N lists of perturbations."""
     return (
         top_genes.loc[top_genes["perturbation"].isin(perturbations), "gene"]
         .value_counts()

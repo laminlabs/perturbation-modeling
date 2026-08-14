@@ -23,10 +23,10 @@ def first_index_per_symbol(var_names: pd.Index | list[str]) -> dict[str, int]:
 
 
 def align_to_gene_panel(adata: ad.AnnData, gene_panel: pd.Index) -> ad.AnnData:
-    """Subset columns to ``gene_panel`` by integer index (first hit per symbol).
+    """Subset columns to gene_panel by integer index (first hit per symbol).
 
-    Duplicate ``var_names`` (common in DRUG-seq) are kept as the first occurrence
-    rather than calling ``var_names_make_unique``.
+    Duplicate var_names (common in DRUG-seq) are kept as the first occurrence
+    rather than calling var_names_make_unique.
     """
     first_idx = first_index_per_symbol(adata.var_names)
     panel_genes = [g for g in gene_panel.astype(str) if g in first_idx]
@@ -59,8 +59,8 @@ def harmonize_anndata(
     """Align one study to the collection schema.
 
     Steps: filter to labeled / overlapping compounds, optional obs cap, map
-    ``symbol_col`` onto ``var_names``, subset to ``gene_panel``, write
-    ``perturbation`` + ``source``, optional ``log1p``.
+    symbol_col onto var_names, subset to gene_panel, write
+    perturbation + source, optional log1p.
     """
     pert = _obs_column(adata, pert_col).map(normalize_compound)
     if allowed_compounds is not None:
@@ -106,7 +106,7 @@ def harmonize_anndata(
 
 
 def gene_symbols(adata: Any, symbol_col: str | None = None) -> pd.Index:
-    """Return unique gene symbols from ``var_names`` or a ``var`` column."""
+    """Return unique gene symbols from var_names or a var column."""
     if symbol_col is None:
         return pd.Index(adata.var_names.astype(str)).unique()
     if symbol_col not in adata.var.columns:

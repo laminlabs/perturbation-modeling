@@ -9,7 +9,7 @@ import lamindb as ln
 
 
 def get_artifact(uid_or_key: str) -> ln.Artifact:
-    """Resolve an artifact by uid, falling back to ``key``."""
+    """Resolve an artifact by uid, falling back to key."""
     try:
         return ln.Artifact.get(uid_or_key)
     except Exception:
