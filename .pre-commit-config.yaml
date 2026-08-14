@@ -10,19 +10,10 @@ repos:
     rev: v3.7.3
     hooks:
       - id: prettier
-        exclude: |
-          (?x)(
-            docs/changelog.md
-          )
   - repo: https://github.com/kynan/nbstripout
     rev: 0.8.2
     hooks:
       - id: nbstripout
-        exclude: |
-          (?x)(
-              docs/examples/|
-              docs/notes/
-          )
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.7
     hooks:

@@ -67,9 +67,6 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
-
 # PyBuilder
 target/
 
@@ -102,7 +99,3 @@ ENV/
 
 # Lamin
 _build
-docs/perturbation_modeling.*
-lamin_sphinx
-docs/conf.py
-_docs_tmp*

@@ -1,19 +1,22 @@
 # perturbation-modeling
 
-Reusable toolkit for cross-study **perturbation transcriptomics**, paired with [LaminDB](https://docs.lamin.ai) so agent runs stay organized.
+Python library for cross-study **perturbation transcriptomics**: harmonize compound screens into a LaminDB `Collection`, train a linear feature-selection model, rank genes, and enrich.
 
-The git repo is the ML scientist's library. LaminDB Transforms are the _runs_ of that library — not a second copy of the same scripts.
+Import it like any other scientific package. Tracked scripts that call it (written by you or by an agent) live on the LaminDB instance — not in this repo.
 
 **Exemplar instance:** [laminlabs/perturbation-modeling](https://lamin.ai/laminlabs/perturbation-modeling)
 
-## Library vs transforms
+## Install
 
-| Layer         | Where                            | Versioned by         | What it is                                                                                    |
-| ------------- | -------------------------------- | -------------------- | --------------------------------------------------------------------------------------------- |
-| Reusable code | `perturbation_modeling/`         | git                  | Harmonize, train, select features, enrich, report helpers. **Not** registered as Transforms.  |
-| A task run    | a script on the LaminDB instance | LaminDB `ln.track()` | Thin script that _imports_ the library, loads/saves artifacts, and becomes a Transform + Run. |
+```bash
+pip install -e ".[train,enrich]"
+```
 
-Agents should treat `perturbation_modeling/` like skills: import the matching module, write a short tracked script **on the instance**, and only edit the library when the reusable API itself needs to change.
+Connect LaminDB to `laminlabs/perturbation-modeling` or your own instance.
+
+## Usage
+
+Reusable logic stays in `perturbation_modeling/`. Each analysis run is a thin script with `ln.track()` / `ln.finish()` that loads and saves LaminDB artifacts:
 
 ```python
 import lamindb as ln
@@ -27,31 +30,30 @@ ln.Artifact.from_dataframe(weights.reset_index(), key=WEIGHTS_KEY).save()
 ln.finish()
 ```
 
+Extend the library when a step is reusable (a new gene-panel rule, another model head). Keep run-specific choices (which collection, how many steps, interpretation notes) in the tracked script.
+
 ## Pipeline
 
-The library covers the workflow already exercised on the exemplar instance:
-
 1. **Harmonize** Tahoe / LINCS / DRUG-seq (or any new study) onto a shared `perturbation` label and gene panel → `Collection`
-2. **Train** a [modlyn](https://modlyn.lamin.ai/quickstart) `SimpleLogReg` on `MappedCollection` (feature selection)
+2. **Train** a [modlyn](https://modlyn.lamin.ai/quickstart) `SimpleLogReg` on `MappedCollection`
 3. **Rank genes** per perturbation from classifier weights
 4. **Enrich** top genes (Enrichr) and write an interpretation report
 
-Appending a study is `append_dataset(DatasetSpec(...))` then retrain — no rebuild of upstream modules.
+Append a study with `append_dataset(DatasetSpec(...))` and retrain — no rebuild of upstream modules.
 
-## Install
+## API
 
-```bash
-pip install -e ".[train,enrich]"
-```
+| Task                                          | Import                                           |
+| --------------------------------------------- | ------------------------------------------------ |
+| Normalize compound names                      | `normalize_compound`                             |
+| Align one AnnData to the collection schema    | `harmonize_anndata`                              |
+| Build Tahoe+LINCS (or any overlap collection) | `build_overlap_collection`, `tahoe_lincs_specs`  |
+| Append DRUG-seq / in-house                    | `DatasetSpec`, `append_dataset`                  |
+| Train / retrain feature-selection model       | `train_feature_selection`                        |
+| Top genes from weights                        | `top_genes_from_weights`                         |
+| Enrichr on those genes                        | `enrich_top_genes`, `best_term_per_perturbation` |
+| Evidence markdown                             | `build_evidence_report`                          |
 
-Connect LaminDB to `laminlabs/perturbation-modeling` (or your own instance) before running a tracked script.
+Default artifact keys are in `perturbation_modeling.keys`. Override them in your script if the instance uses a different prefix.
 
-## Layout
-
-```
-perturbation_modeling/   # importable library (skills)
-tests/
-AGENTS.md                # how an agent should use this repo
-```
-
-See [AGENTS.md](AGENTS.md) for the agent contract.
+Coding agents should follow [AGENTS.md](AGENTS.md) so they import this library instead of copying pipeline logic into one-off scripts.

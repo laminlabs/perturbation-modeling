@@ -86,7 +86,7 @@ def build_evidence_report(
     title: str = "Perturbation feature-selection interpretation",
     extra_sections: list[str] | None = None,
 ) -> str:
-    """Assemble a markdown report; extra_sections is where an agent adds notes."""
+    """Assemble a markdown report; extra_sections holds interpretation notes."""
     best = best_terms.drop(
         columns=[c for c in best_terms.columns if str(c).startswith("Unnamed")]
     )
