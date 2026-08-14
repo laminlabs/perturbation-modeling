@@ -10,12 +10,24 @@ readme = "README.md"
 dynamic = ["version", "description"]
 dependencies = [
     "lamindb",
+    "anndata",
+    "pandas",
+    "numpy",
+    "scanpy",
 ]
 
 [project.urls]
 Home = "https://github.com/laminlabs/perturbation-modeling"
 
 [project.optional-dependencies]
+train = [
+    "modlyn",
+    "lightning",
+    "torch",
+]
+enrich = [
+    "gseapy",
+]
 dev = [
     "pre-commit",
     "nox",
@@ -33,7 +45,7 @@ filterwarnings = [
 ]
 
 [tool.ruff]
-src = ["src"]
+src = ["perturbation_modeling", "tests"]
 line-length = 88
 lint.select = [
     "F",  # Errors detected by Pyflakes

@@ -2,9 +2,9 @@ fail_fast: false
 default_language_version:
   python: python3
 default_stages:
-  - pre-commit
-  - pre-push
-minimum_pre_commit_version: 3.2.0
+  - commit
+  - push
+minimum_pre_commit_version: 4.0.0
 repos:
   - repo: https://github.com/rbubley/mirrors-prettier
     rev: v3.7.3
