@@ -10,18 +10,29 @@ readme = "README.md"
 dynamic = ["version", "description"]
 dependencies = [
     "lamindb",
+    "anndata",
+    "pandas",
+    "numpy",
+    "scanpy",
 ]
 
 [project.urls]
 Home = "https://github.com/laminlabs/perturbation-modeling"
 
 [project.optional-dependencies]
+train = [
+    "modlyn",
+    "lightning",
+    "torch",
+]
+enrich = [
+    "gseapy",
+]
 dev = [
     "pre-commit",
     "nox",
     "pytest>=6.0",
     "pytest-cov",
-    "nbproject_test",
 ]
 
 [tool.pytest.ini_options]
@@ -33,7 +44,7 @@ filterwarnings = [
 ]
 
 [tool.ruff]
-src = ["src"]
+src = ["perturbation_modeling", "tests"]
 line-length = 88
 lint.select = [
     "F",  # Errors detected by Pyflakes
@@ -125,7 +136,6 @@ lint.ignore = [
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"docs/*" = ["I", "S101"]
 "tests/**/*.py" = [
     "D",  # docstrings are allowed to look a bit off
     "S101", # asserts allowed in tests...
