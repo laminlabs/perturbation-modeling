@@ -35,4 +35,4 @@ Put run-specific choices (which collection, how many steps, extra interpretation
 
 - Do not re-register `perturbation_modeling/*.py` as Transforms.
 - Do not duplicate `harmonize_anndata` inside a script "just this once."
-- Do not hardcode `boehringer-demo/` keys; use `perturbation_modeling.keys` or pass keys in.
+- Do not hardcode keys; use `perturbation_modeling.keys` or pass keys in.
