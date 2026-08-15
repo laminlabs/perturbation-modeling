@@ -12,6 +12,7 @@ from perturbation_modeling import (
     lincs_spec,
     lincs_specs,
     normalize_compound,
+    tahoe_artifact_key,
     tahoe_spec,
     top_genes_from_weights,
 )
@@ -20,7 +21,7 @@ from perturbation_modeling.compounds import normalize_compound as _norm
 from perturbation_modeling.enrichment import best_term_per_perturbation, short_term
 from perturbation_modeling.features import rank_perturbations, recurrent_genes
 from perturbation_modeling.harmonize import align_to_gene_panel
-from perturbation_modeling.keys import LINCS_UIDS, TAHOE_UID
+from perturbation_modeling.keys import LINCS_UIDS, TAHOE_TEST_UID
 
 
 def test_normalize_compound():
@@ -109,10 +110,20 @@ def test_enrichment_helpers_and_report():
 def test_dataset_specs_are_independent():
     t = tahoe_spec(max_obs=1000)
     assert t.source == "tahoe"
-    assert t.uid_or_key == TAHOE_UID
+    assert t.uid_or_key == TAHOE_TEST_UID
     assert t.pert_col == "drug"
     assert t.symbol_col is None
     assert t.max_obs == 1000
+
+    plate = tahoe_spec(
+        uid_or_key=tahoe_artifact_key(14),
+        max_obs=None,
+    )
+    assert plate.uid_or_key == (
+        "tahoe100m/2025-02-25/"
+        "plate14_filt_Vevo_Tahoe100M_WServicesFrom_ParseGigalab/obs.parquet"
+    )
+    assert plate.max_obs is None
 
     one = lincs_spec("lincs_phase2")
     assert one.source == "lincs_phase2"

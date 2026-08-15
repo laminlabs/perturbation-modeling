@@ -17,7 +17,7 @@ from .keys import (
     OVERLAP_KEY,
     PREFIX,
     TAHOE_HARMONIZED_KEY,
-    TAHOE_UID,
+    TAHOE_TEST_UID,
 )
 
 
@@ -41,13 +41,19 @@ class DatasetSpec:
 
 def tahoe_spec(
     *,
-    uid_or_key: str = TAHOE_UID,
+    uid_or_key: str = TAHOE_TEST_UID,
     pert_col: str = "drug",
     max_obs: int | None = 200000,
     artifact_key: str | None = TAHOE_HARMONIZED_KEY,
     description: str | None = None,
 ) -> DatasetSpec:
-    """DatasetSpec for a Tahoe AnnData artifact."""
+    """DatasetSpec for a Tahoe AnnData artifact.
+
+    Default uid_or_key is the small shard_0.h5ad used in tests
+    (TAHOE_TEST_UID / TAHOE_TEST_KEY). For production plates pass a key from
+    tahoe_artifact_key, for example
+    tahoe_spec(uid_or_key=tahoe_artifact_key(14), max_obs=None).
+    """
     return DatasetSpec(
         uid_or_key=uid_or_key,
         source="tahoe",

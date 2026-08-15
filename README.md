@@ -30,8 +30,11 @@ from perturbation_modeling import (
 )
 
 ln.track()
-# Tahoe + all LINCS phases, compounds restricted to the intersection:
+# Test shard (default) + LINCS, compounds restricted to the intersection:
 build_collection([tahoe_spec(), *lincs_specs()])
+# Production Tahoe plate (Arc / Vevo), no obs cap:
+# from perturbation_modeling import tahoe_artifact_key
+# build_collection([tahoe_spec(uid_or_key=tahoe_artifact_key(14), max_obs=None)])
 # LINCS only (one or more phases):
 # build_collection(lincs_specs(sources=["lincs_phase2"]))
 # In-house only:

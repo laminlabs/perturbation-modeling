@@ -18,5 +18,6 @@ from .compounds import normalize_compound
 from .enrichment import best_term_per_perturbation, enrich_top_genes
 from .features import top_genes_from_weights
 from .harmonize import harmonize_anndata
+from .keys import tahoe_artifact_key
 from .report import build_evidence_report
 from .train import train_feature_selection
