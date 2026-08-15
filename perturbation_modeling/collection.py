@@ -10,7 +10,7 @@ import pandas as pd
 
 from .compounds import normalize_compound
 from .harmonize import gene_symbols, harmonize_anndata
-from .io import close_backed, open_backed
+from .io import close_backed, open_study
 from .keys import (
     COLLECTION_KEY,
     LINCS_UIDS,
@@ -19,6 +19,7 @@ from .keys import (
     TAHOE_HARMONIZED_KEY,
     TAHOE_TEST_UID,
 )
+from .schema import load_pert_series, resolve_pert_col
 
 
 @dataclass(frozen=True)
@@ -50,7 +51,10 @@ def tahoe_spec(
     """DatasetSpec for a Tahoe AnnData artifact.
 
     Default uid_or_key is the small shard_0.h5ad used in tests
-    (TAHOE_TEST_UID / TAHOE_TEST_KEY). For production plates pass a key from
+    (TAHOE_TEST_UID / TAHOE_TEST_KEY), which has no PertSchema and uses drug.
+    Curated plates on laminlabs/pertdata (PertSchema obs) expose pert_compound;
+    build_collection / append_dataset switch to that column when the artifact
+    schema includes it. For production plates pass a key from
     tahoe_artifact_key, for example
     tahoe_spec(uid_or_key=tahoe_artifact_key(14), max_obs=None).
     """
@@ -130,6 +134,16 @@ def load_gene_panel(key: str) -> pd.Index:
     return art.load().var_names.copy()
 
 
+def _open_spec(spec: DatasetSpec) -> tuple[Any, Any, str, pd.Series]:
+    """Open expression data and resolve the perturbation column from schema."""
+    x_art, adata, obs_art = open_study(spec.uid_or_key)
+    pert_col = resolve_pert_col(obs_art or x_art, spec.pert_col)
+    if pert_col != spec.pert_col:
+        print(f"{spec.source}: using {pert_col} from schema instead of {spec.pert_col}")
+    pert = load_pert_series(adata, pert_col, obs_art)
+    return x_art, adata, pert_col, pert
+
+
 def load_overlap_compounds(key: str = OVERLAP_KEY) -> set[str] | None:
     art = ln.Artifact.filter(key=key, is_latest=True).one_or_none()
     if art is None:
@@ -178,17 +192,16 @@ def build_collection(
     if not specs:
         raise ValueError("Need at least one DatasetSpec")
 
-    loaded: list[tuple[DatasetSpec, Any, Any, pd.Series]] = []
+    loaded: list[tuple[DatasetSpec, Any, Any, str, pd.Series]] = []
     symbol_sets: list[pd.Index] = []
     for spec in specs:
-        art, adata = open_backed(spec.uid_or_key)
-        pert = adata.obs[spec.pert_col]
-        loaded.append((spec, art, adata, pert))
+        art, adata, pert_col, pert = _open_spec(spec)
+        loaded.append((spec, art, adata, pert_col, pert))
         symbol_sets.append(gene_symbols(adata, spec.symbol_col))
         print(spec.source, art.key, adata.shape)
 
     if intersect_compounds and len(specs) > 1:
-        allowed = set(overlap_compounds(*[pert for _, _, _, pert in loaded]))
+        allowed = set(overlap_compounds(*[pert for _, _, _, _, pert in loaded]))
         print("normalized compound overlap:", len(allowed))
     else:
         allowed = None
@@ -203,16 +216,17 @@ def build_collection(
     artifacts: list[ln.Artifact] = []
     kept_compounds: set[str] = set()
     try:
-        for spec, _art, adata, _pert in loaded:
+        for spec, _art, adata, pert_col, pert in loaded:
             harmonized = harmonize_anndata(
                 adata,
                 source=spec.source,
-                pert_col=spec.pert_col,
+                pert_col=pert_col,
                 gene_panel=gene_panel,
                 symbol_col=spec.symbol_col,
                 allowed_compounds=allowed,
                 max_obs=spec.max_obs,
                 log1p=log1p,
+                pert=pert,
             )
             kept_compounds.update(harmonized.obs["perturbation"].astype(str))
             artifacts.append(
@@ -220,11 +234,11 @@ def build_collection(
                     harmonized,
                     key=spec.output_key(prefix),
                     description=spec.description
-                    or (f"{spec.source}: pert_col={spec.pert_col}, log1p={log1p}"),
+                    or (f"{spec.source}: pert_col={pert_col}, log1p={log1p}"),
                 )
             )
     finally:
-        for _spec, _art, adata, _pert in loaded:
+        for _spec, _art, adata, _pert_col, _pert in loaded:
             close_backed(adata)
 
     if overlap_key is not None:
@@ -276,18 +290,19 @@ def append_dataset(
     if filter_to_overlap and allowed is None:
         print("warning: no overlap artifact; keeping all non-empty perturbations")
 
-    src_art, src_adata = open_backed(spec.uid_or_key)
+    src_art, src_adata, pert_col, pert = _open_spec(spec)
     print("source artifact", src_art.uid, src_art.key, src_adata.shape)
     try:
         harmonized = harmonize_anndata(
             src_adata,
             source=spec.source,
-            pert_col=spec.pert_col,
+            pert_col=pert_col,
             gene_panel=gene_panel,
             symbol_col=spec.symbol_col,
             allowed_compounds=allowed,
             max_obs=spec.max_obs,
             log1p=log1p,
+            pert=pert,
         )
     finally:
         close_backed(src_adata)
@@ -298,7 +313,7 @@ def append_dataset(
         description=spec.description
         or (
             f"{spec.source} appended to {collection_key}: "
-            f"pert_col={spec.pert_col}, log1p={log1p}"
+            f"pert_col={pert_col}, log1p={log1p}"
         ),
     )
     collection_new = collection.append(new_art).save()

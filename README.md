@@ -35,6 +35,8 @@ build_collection([tahoe_spec(), *lincs_specs()])
 # Production Tahoe plate (Arc / Vevo), no obs cap:
 # from perturbation_modeling import tahoe_artifact_key
 # build_collection([tahoe_spec(uid_or_key=tahoe_artifact_key(14), max_obs=None)])
+# Curated Tahoe on laminlabs/pertdata (PertSchema obs): pert_compound is used
+# automatically when artifact.schema includes that feature.
 # LINCS only (one or more phases):
 # build_collection(lincs_specs(sources=["lincs_phase2"]))
 # In-house only:
@@ -73,6 +75,7 @@ Append a study with `append_dataset(DatasetSpec(...))` and retrain — no rebuil
 | ------------------------------------------- | -------------------------------------------------------- |
 | Normalize compound names                    | `normalize_compound`                                     |
 | Align one AnnData to the collection schema  | `harmonize_anndata`                                      |
+| Pick the column of compound names           | `resolve_pert_col`                                       |
 | Describe a study                            | `DatasetSpec`, `tahoe_spec`, `lincs_spec`, `lincs_specs` |
 | Build a collection from any list of studies | `build_collection`                                       |
 | Append another study                        | `append_dataset`                                         |

@@ -147,3 +147,126 @@ def test_overlap_compounds_one_or_many():
     b = pd.Series(["imatinib", "vehicle"])
     assert overlap_compounds(a) == ["dmso", "imatinib"]
     assert overlap_compounds(a, b) == ["imatinib"]
+
+
+class _FakeMembers:
+    def __init__(self, names):
+        self._names = list(names)
+
+    def values_list(self, field, flat=True):
+        return list(self._names)
+
+    def __iter__(self):
+        return iter(self._names)
+
+
+class _FakeSchema:
+    def __init__(self, names):
+        self.members = _FakeMembers(names)
+
+
+class _FakeArtifact:
+    def __init__(self, key, schema=None, suffix=None, features=None, frame=None):
+        self.key = key
+        self.schema = schema
+        self.suffix = suffix
+        self.features = features or {}
+        self._frame = frame
+
+    def load(self):
+        return self._frame
+
+    def open(self):
+        return self._frame
+
+
+def test_resolve_pert_col_from_schema():
+    from perturbation_modeling.schema import (
+        load_pert_series,
+        related_obs_artifact,
+        related_x_artifact,
+        resolve_pert_col,
+        sibling_key,
+    )
+
+    uncurated = _FakeArtifact(
+        "dataloader_v2/tahoe100M_sharded/shard_0.h5ad", suffix=".h5ad"
+    )
+    assert resolve_pert_col(uncurated, "drug") == "drug"
+    assert resolve_pert_col(uncurated) == "drug"
+
+    composite = _FakeArtifact(
+        "study.h5ad",
+        schema=type(
+            "S", (), {"members": None, "slots": {"obs": _FakeSchema(["pert_compound"])}}
+        )(),
+        suffix=".h5ad",
+    )
+    assert resolve_pert_col(composite, "drug") == "pert_compound"
+
+    curated = _FakeArtifact(
+        "tahoe100m/plate14/obs.parquet",
+        schema=_FakeSchema(["pert_compound", "cell_line"]),
+        suffix=".parquet",
+    )
+    assert resolve_pert_col(curated, "drug") == "pert_compound"
+    assert resolve_pert_col(curated) == "pert_compound"
+    assert resolve_pert_col(curated, "custom_col") == "custom_col"
+
+    x_art = _FakeArtifact(
+        "tahoe100m/plate14/X.h5ad",
+        suffix=".h5ad",
+        features={"obs": curated},
+    )
+    obs_with_x = _FakeArtifact(
+        "tahoe100m/plate14/obs.parquet",
+        schema=_FakeSchema(["pert_compound"]),
+        suffix=".parquet",
+        features={"X": x_art},
+    )
+    assert resolve_pert_col(x_art, "drug") == "pert_compound"
+    assert related_obs_artifact(curated) is curated
+    assert related_x_artifact(x_art) is x_art
+    assert related_obs_artifact(x_art) is curated
+    assert related_x_artifact(obs_with_x) is x_art
+
+    assert (
+        sibling_key("a/X.h5ad", from_name="X.h5ad", to_name="obs.parquet")
+        == "a/obs.parquet"
+    )
+    assert (
+        sibling_key("a/obs.parquet", from_name="obs.parquet", to_name="X.h5ad")
+        == "a/X.h5ad"
+    )
+
+    adata = ad.AnnData(
+        X=np.zeros((2, 1), dtype=np.float32),
+        obs=pd.DataFrame(index=["c1", "c2"]),
+        var=pd.DataFrame(index=["EGFR"]),
+    )
+    obs = _FakeArtifact(
+        "obs.parquet",
+        suffix=".parquet",
+        frame=pd.DataFrame({"pert_compound": ["Imatinib", "DMSO"]}, index=["c1", "c2"]),
+    )
+    series = load_pert_series(adata, "pert_compound", obs)
+    assert list(series) == ["Imatinib", "DMSO"]
+
+
+def test_harmonize_external_pert_series():
+    adata = ad.AnnData(
+        X=np.arange(8, dtype=np.float32).reshape(2, 4),
+        obs=pd.DataFrame(index=["c1", "c2"]),
+        var=pd.DataFrame(index=["EGFR", "GAPDH", "ACTB", "TP53"]),
+    )
+    pert = pd.Series(["Imatinib (mesylate)", "DMSO"], index=["c1", "c2"])
+    out = harmonize_anndata(
+        adata,
+        source="pertdata",
+        pert_col="pert_compound",
+        gene_panel=pd.Index(["EGFR", "TP53"]),
+        log1p=False,
+        pert=pert,
+    )
+    assert list(out.obs["perturbation"]) == ["imatinib", "dmso"]
+    assert list(out.var_names) == ["EGFR", "TP53"]

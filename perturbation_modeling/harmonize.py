@@ -43,6 +43,18 @@ def _obs_column(adata: Any, col: str) -> pd.Series:
     return adata.obs[col]
 
 
+def _align_pert(pert: pd.Series, obs_names: pd.Index) -> pd.Series:
+    names = pd.Index(obs_names).astype(str)
+    s = pert.copy()
+    s.index = s.index.astype(str)
+    if s.index.equals(names) or bool(s.index.isin(names).all()):
+        return s.reindex(names)
+    if len(s) == len(names):
+        s.index = names
+        return s
+    raise ValueError("Cannot align perturbation labels to obs_names")
+
+
 def harmonize_anndata(
     adata: Any,
     *,
@@ -55,24 +67,33 @@ def harmonize_anndata(
     log1p: bool = True,
     label_col: str = "perturbation",
     source_col: str = "source",
+    pert: pd.Series | None = None,
 ) -> ad.AnnData:
     """Align one study to the collection schema.
 
     Steps: filter to labeled / overlapping compounds, optional obs cap, map
     symbol_col onto var_names, subset to gene_panel, write
     perturbation + source, optional log1p.
+
+    pert can be passed from a curated obs.parquet when adata.obs has no
+    pert_compound column.
     """
-    pert = _obs_column(adata, pert_col).map(normalize_compound)
-    if allowed_compounds is not None:
-        mask = pert.isin(allowed_compounds).to_numpy()
+    if pert is None:
+        raw = _obs_column(adata, pert_col)
     else:
-        mask = (pert != "").to_numpy()
+        raw = pert
+    raw = _align_pert(raw, adata.obs_names)
+    pert_norm = raw.map(normalize_compound)
+    if allowed_compounds is not None:
+        mask = pert_norm.isin(allowed_compounds).to_numpy()
+    else:
+        mask = (pert_norm != "").to_numpy()
 
     subset = adata[mask]
-    pert = pert.loc[subset.obs_names]
+    pert_norm = pert_norm.loc[pd.Index(subset.obs_names).astype(str)]
     if max_obs is not None and subset.n_obs > max_obs:
         subset = subset[:max_obs]
-        pert = pert.loc[subset.obs_names]
+        pert_norm = pert_norm.loc[pd.Index(subset.obs_names).astype(str)]
         print(f"capping obs at {max_obs}")
 
     if symbol_col is None and gene_panel is not None:
@@ -94,7 +115,7 @@ def harmonize_anndata(
     elif gene_panel is not None:
         out.var_names = pd.Index(out.var_names.astype(str))
 
-    out.obs[label_col] = pert.astype(str).values
+    out.obs[label_col] = _align_pert(pert_norm, out.obs_names).astype(str).values
     out.obs[source_col] = source
     print(f"{source}: {out.n_obs} obs, {out.n_vars} genes")
 

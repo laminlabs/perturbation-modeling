@@ -22,6 +22,27 @@ def open_backed(uid_or_key: str) -> tuple[ln.Artifact, Any]:
     return art, art.open()
 
 
+def open_study(uid_or_key: str) -> tuple[ln.Artifact, Any, Any | None]:
+    """Open expression data plus the curated obs sidecar when present.
+
+    Returns (expression_artifact, adata_or_accessor, obs_artifact_or_none).
+    If uid_or_key points at a curated obs.parquet (PertSchema obs), the linked
+    X.h5ad is opened for counts.
+    """
+    from .schema import related_obs_artifact, related_x_artifact
+
+    art = get_artifact(uid_or_key)
+    obs_art = related_obs_artifact(art)
+    x_art = related_x_artifact(art)
+    if x_art is None:
+        raise RuntimeError(
+            f"No AnnData artifact linked to {getattr(art, 'key', uid_or_key)!r}. "
+            "Pass an .h5ad key or a curated obs.parquet with a linked X.h5ad."
+        )
+    obs_out = obs_art if obs_art is not None and obs_art is not x_art else None
+    return x_art, x_art.open(), obs_out
+
+
 def close_backed(adata: Any) -> None:
     """Close a backed AnnData / accessor if it still holds a file handle."""
     if getattr(adata, "isbacked", False) and getattr(adata, "file", None) is not None:

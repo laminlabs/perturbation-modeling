@@ -2,8 +2,9 @@
 
 Override these in a transform when working on a different instance or prefix.
 
-Tahoe: TAHOE_TEST_* is the small shard_0.h5ad used in tests and the exemplar.
-Production plates use keys like
+Tahoe: TAHOE_TEST_* is the small shard_0.h5ad used in tests and the exemplar
+(uncurated; obs column is drug). Curated plates on laminlabs/pertdata use
+PertSchema obs (pert_compound). Production keys look like
 tahoe100m/2025-02-25/plate14_filt_Vevo_Tahoe100M_WServicesFrom_ParseGigalab/obs.parquet
 (see tahoe_artifact_key).
 """
