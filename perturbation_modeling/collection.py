@@ -10,7 +10,7 @@ import pandas as pd
 
 from .compounds import normalize_compound
 from .harmonize import gene_symbols, harmonize_anndata
-from .io import close_backed, open_study
+from .io import close_backed, open_study, var_names_from_artifact
 from .keys import (
     LABEL_COL,
     LINCS_UIDS,
@@ -143,7 +143,7 @@ def load_gene_panel(key: str) -> pd.Index:
     art = ln.Artifact.filter(key=key, is_latest=True).one_or_none()
     if art is None:
         raise RuntimeError(f"Missing gene-panel artifact {key}")
-    return art.load().var_names.copy()
+    return var_names_from_artifact(art)
 
 
 def _open_spec(spec: DatasetSpec) -> tuple[Any, Any, str, pd.Series]:
@@ -179,7 +179,8 @@ def _gene_panel_from_collection(collection: ln.Collection) -> pd.Index:
     art = collection.artifacts.order_by("created_at").first()
     if art is None:
         raise RuntimeError(f"Collection {collection.key} has no artifacts")
-    return art.load().var_names.copy()
+    print("gene panel from", art.key)
+    return var_names_from_artifact(art)
 
 
 def build_collection(
@@ -312,6 +313,7 @@ def append_dataset(
         gene_panel = load_gene_panel(gene_panel_key)
     else:
         gene_panel = _gene_panel_from_collection(collection)
+    print("gene panel size", len(gene_panel))
 
     allowed = (
         load_overlap_compounds(overlap_key)
