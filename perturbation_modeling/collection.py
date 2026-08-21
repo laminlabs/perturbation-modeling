@@ -118,12 +118,24 @@ def lincs_specs(
     return [lincs_spec(name, **kwargs) for name in names]
 
 
-def overlap_compounds(*series: pd.Series) -> list[str]:
-    """Sorted intersection of normalized compound names, dropping empties."""
+def overlap_compounds(*series: pd.Series, how: str = "first") -> list[str]:
+    """Normalized compound overlap, dropping empties.
+
+    how="first" (default): first series ∩ union of the rest. That is the
+    original Tahoe ∩ (all LINCS phases) join — a name only has to appear in
+    one LINCS file, not every phase.
+    how="all": intersection of every series (often just DMSO across phases).
+    """
     sets = [set(s.map(normalize_compound)) - {""} for s in series]
     if not sets:
         return []
-    return sorted(set.intersection(*sets))
+    if how == "all":
+        return sorted(set.intersection(*sets))
+    if how != "first":
+        raise ValueError(f"how must be 'first' or 'all', got {how!r}")
+    if len(sets) == 1:
+        return sorted(sets[0])
+    return sorted(sets[0] & set.union(*sets[1:]))
 
 
 def load_gene_panel(key: str) -> pd.Index:
@@ -192,8 +204,8 @@ def build_collection(
     / overlap_key to override; ``save_overlap=False`` skips the compound table.
 
     If intersect_compounds is True and there are multiple specs, each study is
-    subset to the shared compound names. With one spec, all non-empty labels
-    are kept.
+    subset to names in the first spec that also appear in at least one other
+    spec (Tahoe ∩ union of LINCS, not the intersection of every phase).
     """
     if not specs:
         raise ValueError("Need at least one DatasetSpec")
@@ -214,7 +226,10 @@ def build_collection(
 
     if intersect_compounds and len(specs) > 1:
         allowed = set(overlap_compounds(*[pert for _, _, _, _, pert in loaded]))
-        print("normalized compound overlap:", len(allowed))
+        print(
+            "normalized compound overlap "
+            f"({loaded[0][0].source} ∩ others): {len(allowed)}"
+        )
     else:
         allowed = None
 

@@ -194,8 +194,13 @@ def test_dataset_specs_are_independent():
 def test_overlap_compounds_one_or_many():
     a = pd.Series(["Imatinib (mesylate)", "DMSO"])
     b = pd.Series(["imatinib", "vehicle"])
+    c = pd.Series(["dmso", "vehicle"])
     assert overlap_compounds(a) == ["dmso", "imatinib"]
     assert overlap_compounds(a, b) == ["imatinib"]
+    # First ∩ union(rest): keep names in Tahoe that appear in any LINCS phase.
+    assert overlap_compounds(a, b, c) == ["dmso", "imatinib"]
+    # Intersection of every series is empty here (no name in a, b, and c).
+    assert overlap_compounds(a, b, c, how="all") == []
 
 
 class _FakeMembers:

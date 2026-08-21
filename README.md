@@ -4,7 +4,7 @@ Python library for cross-study **perturbation transcriptomics**: harmonize compo
 
 Import it like any other scientific package. Tracked scripts that call it (written by you or by an agent) live on the LaminDB instance — not in this repo.
 
-**Exemplar instance:** [laminlabs/perturbation-modeling](https://lamin.ai/laminlabs/perturbation-modeling)
+**Exemplar instance (optional):** [laminlabs/perturbation-modeling](https://lamin.ai/laminlabs/perturbation-modeling)
 
 ## Install
 
@@ -12,7 +12,17 @@ Import it like any other scientific package. Tracked scripts that call it (writt
 pip install -e ".[train,enrich]"
 ```
 
-Connect LaminDB to `laminlabs/perturbation-modeling` or your own instance.
+Connect LaminDB to **your** instance, then point that instance at the folder
+that holds the tracked scripts:
+
+```bash
+lamin connect <owner/name>
+cd /path/to/your/scripts
+lamin settings set dev-dir .
+```
+
+The library does not pin an instance. An optional public exemplar is
+[laminlabs/perturbation-modeling](https://lamin.ai/laminlabs/perturbation-modeling).
 
 ## Usage
 
@@ -30,7 +40,7 @@ from perturbation_modeling import (
 )
 
 ln.track()
-# Test shard (default) + LINCS, compounds restricted to the intersection:
+# Test shard (default) + LINCS, compounds in Tahoe that also appear in any LINCS phase:
 build_collection([tahoe_spec(), *lincs_specs()])
 # Same pipeline under a different key prefix:
 # build_collection([tahoe_spec(), *lincs_specs()], prefix="my_run")
