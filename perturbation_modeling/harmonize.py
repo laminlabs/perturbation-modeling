@@ -13,6 +13,15 @@ from .keys import LABEL_COL, SOURCE_COL
 if TYPE_CHECKING:
     import anndata as ad
 
+_SYMBOL_COL_CANDIDATES = (
+    "gene_symbol",
+    "pr_gene_symbol",
+    "gene_name",
+    "Gene",
+    "symbol",
+    "gene",
+)
+
 
 def first_index_per_symbol(var_names: pd.Index | list[str]) -> dict[str, int]:
     """Map each gene symbol to the first column index it appears at."""
@@ -21,6 +30,50 @@ def first_index_per_symbol(var_names: pd.Index | list[str]) -> dict[str, int]:
         if name not in first_idx:
             first_idx[name] = i
     return first_idx
+
+
+def _panel_overlap(names: Any, panel: set[str]) -> int:
+    return sum(1 for n in pd.Index(names).astype(str) if n in panel)
+
+
+def resolve_symbol_col(
+    adata: Any,
+    gene_panel: pd.Index | None,
+    requested: str | None = None,
+) -> str | None:
+    """Pick a var column of gene symbols when var_names do not match the panel.
+
+    Returns None when var_names already overlap the panel (use them as-is).
+    """
+    if requested is not None:
+        return requested
+    if gene_panel is None:
+        return None
+    panel = set(pd.Index(gene_panel).astype(str))
+    if _panel_overlap(adata.var_names, panel) > 0:
+        return None
+    var = getattr(adata, "var", None)
+    columns = list(getattr(var, "columns", []))
+    ordered = [c for c in _SYMBOL_COL_CANDIDATES if c in columns]
+    ordered += [c for c in columns if c not in ordered]
+    best_col, best_n = None, 0
+    for col in ordered:
+        n = _panel_overlap(var[col], panel)
+        if n > best_n:
+            best_col, best_n = col, n
+    if best_col is None:
+        sample_var = list(pd.Index(adata.var_names).astype(str)[:8])
+        sample_panel = list(pd.Index(gene_panel).astype(str)[:8])
+        raise RuntimeError(
+            "No shared genes with the collection panel. "
+            f"var_names look like {sample_var}; panel looks like {sample_panel}. "
+            f"var columns: {columns or '(none)'}. "
+            "Pass symbol_col=... / --symbol-col with the gene-symbol column."
+        )
+    print(
+        f"using var[{best_col!r}] as gene symbols ({best_n} / {len(panel)} panel genes)"
+    )
+    return best_col
 
 
 def align_to_gene_panel(adata: ad.AnnData, gene_panel: pd.Index) -> ad.AnnData:
@@ -96,6 +149,9 @@ def harmonize_anndata(
         subset = subset[:max_obs]
         pert_norm = pert_norm.loc[pd.Index(subset.obs_names).astype(str)]
         print(f"capping obs at {max_obs}")
+
+    if gene_panel is not None:
+        symbol_col = resolve_symbol_col(subset, gene_panel, requested=symbol_col)
 
     if symbol_col is None and gene_panel is not None:
         first_idx = first_index_per_symbol(subset.var_names)

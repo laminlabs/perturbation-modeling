@@ -98,6 +98,59 @@ def test_harmonize_filters_and_gene_panel():
     assert list(out.var_names) == ["TP53", "EGFR"]
 
 
+def test_resolve_symbol_col_from_var():
+    from perturbation_modeling.harmonize import resolve_symbol_col
+
+    panel = pd.Index(["EGFR", "TP53"])
+    symbols = ad.AnnData(
+        X=np.zeros((1, 3), dtype=np.float32),
+        obs=pd.DataFrame({"drug": ["a"]}),
+        var=pd.DataFrame(index=["EGFR", "GAPDH", "TP53"]),
+    )
+    assert resolve_symbol_col(symbols, panel) is None
+
+    ensembl = ad.AnnData(
+        X=np.zeros((1, 3), dtype=np.float32),
+        obs=pd.DataFrame({"drug": ["a"]}),
+        var=pd.DataFrame(
+            {"gene_name": ["EGFR", "GAPDH", "TP53"]},
+            index=["ENSG1", "ENSG2", "ENSG3"],
+        ),
+    )
+    assert resolve_symbol_col(ensembl, panel) == "gene_name"
+
+    no_match = ad.AnnData(
+        X=np.zeros((1, 2), dtype=np.float32),
+        obs=pd.DataFrame({"drug": ["a"]}),
+        var=pd.DataFrame(index=["ENSG1", "ENSG2"]),
+    )
+    try:
+        resolve_symbol_col(no_match, panel)
+    except RuntimeError as e:
+        assert "Pass symbol_col" in str(e)
+    else:
+        raise AssertionError("expected RuntimeError")
+
+
+def test_harmonize_uses_symbol_column():
+    adata = ad.AnnData(
+        X=np.arange(6, dtype=np.float32).reshape(2, 3),
+        obs=pd.DataFrame({"drug": ["Imatinib", "DMSO"]}),
+        var=pd.DataFrame(
+            {"gene_name": ["EGFR", "GAPDH", "TP53"]},
+            index=["ENSG1", "ENSG2", "ENSG3"],
+        ),
+    )
+    out = harmonize_anndata(
+        adata,
+        source="drug-seq",
+        pert_col="drug",
+        gene_panel=pd.Index(["TP53", "EGFR"]),
+        log1p=False,
+    )
+    assert list(out.var_names) == ["TP53", "EGFR"]
+
+
 def test_align_duplicate_var_names():
     adata = ad.AnnData(
         X=np.array([[1.0, 9.0, 2.0]], dtype=np.float32),
