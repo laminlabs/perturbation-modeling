@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 
 from .compounds import normalize_compound
-from .io import to_memory_adata
+from .io import n_obs, to_memory_adata
 from .keys import LABEL_COL, SOURCE_COL
 
 if TYPE_CHECKING:
@@ -92,7 +92,7 @@ def harmonize_anndata(
 
     subset = adata[mask]
     pert_norm = pert_norm.loc[pd.Index(subset.obs_names).astype(str)]
-    if max_obs is not None and subset.n_obs > max_obs:
+    if max_obs is not None and n_obs(subset) > max_obs:
         subset = subset[:max_obs]
         pert_norm = pert_norm.loc[pd.Index(subset.obs_names).astype(str)]
         print(f"capping obs at {max_obs}")

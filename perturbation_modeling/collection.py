@@ -12,13 +12,11 @@ from .compounds import normalize_compound
 from .harmonize import gene_symbols, harmonize_anndata
 from .io import close_backed, open_study
 from .keys import (
-    COLLECTION_KEY,
     LABEL_COL,
     LINCS_UIDS,
-    OVERLAP_KEY,
     PREFIX,
-    TAHOE_HARMONIZED_KEY,
     TAHOE_TEST_UID,
+    output_keys,
 )
 from .schema import load_pert_series, resolve_pert_col
 
@@ -38,6 +36,7 @@ class DatasetSpec:
     def output_key(self, prefix: str = PREFIX) -> str:
         if self.artifact_key is not None:
             return self.artifact_key
+        prefix = prefix.strip().strip("/")
         return f"{prefix}/{self.source}_harmonized.h5ad"
 
 
@@ -46,7 +45,7 @@ def tahoe_spec(
     uid_or_key: str = TAHOE_TEST_UID,
     pert_col: str = "drug",
     max_obs: int | None = 200000,
-    artifact_key: str | None = TAHOE_HARMONIZED_KEY,
+    artifact_key: str | None = None,
     description: str | None = None,
 ) -> DatasetSpec:
     """DatasetSpec for a Tahoe AnnData artifact.
@@ -145,7 +144,8 @@ def _open_spec(spec: DatasetSpec) -> tuple[Any, Any, str, pd.Series]:
     return x_art, adata, pert_col, pert
 
 
-def load_overlap_compounds(key: str = OVERLAP_KEY) -> set[str] | None:
+def load_overlap_compounds(key: str | None = None) -> set[str] | None:
+    key = key or output_keys().overlap
     art = ln.Artifact.filter(key=key, is_latest=True).one_or_none()
     if art is None:
         return None
@@ -173,9 +173,10 @@ def _gene_panel_from_collection(collection: ln.Collection) -> pd.Index:
 def build_collection(
     specs: list[DatasetSpec],
     *,
-    collection_key: str = COLLECTION_KEY,
-    overlap_key: str | None = OVERLAP_KEY,
     prefix: str = PREFIX,
+    collection_key: str | None = None,
+    overlap_key: str | None = None,
+    save_overlap: bool = True,
     log1p: bool = True,
     intersect_compounds: bool = True,
     collection_description: str | None = None,
@@ -186,12 +187,22 @@ def build_collection(
     Gene panel is the intersection of symbols across specs (or that one study
     if specs has a single entry).
 
+    Output keys default to ``output_keys(prefix)`` (Collection, compound table,
+    and each study's ``{prefix}/{source}_harmonized.h5ad``). Pass collection_key
+    / overlap_key to override; ``save_overlap=False`` skips the compound table.
+
     If intersect_compounds is True and there are multiple specs, each study is
     subset to the shared compound names. With one spec, all non-empty labels
     are kept.
     """
     if not specs:
         raise ValueError("Need at least one DatasetSpec")
+    keys = output_keys(prefix)
+    collection_key = collection_key or keys.collection
+    if save_overlap:
+        overlap_key = overlap_key or keys.overlap
+    else:
+        overlap_key = None
 
     loaded: list[tuple[DatasetSpec, Any, Any, str, pd.Series]] = []
     symbol_sets: list[pd.Index] = []
@@ -233,7 +244,7 @@ def build_collection(
             artifacts.append(
                 save_harmonized(
                     harmonized,
-                    key=spec.output_key(prefix),
+                    key=spec.output_key(keys.prefix),
                     description=spec.description
                     or (f"{spec.source}: pert_col={pert_col}, log1p={log1p}"),
                 )
@@ -263,18 +274,22 @@ def build_collection(
 def append_dataset(
     spec: DatasetSpec,
     *,
-    collection_key: str = COLLECTION_KEY,
+    prefix: str = PREFIX,
+    collection_key: str | None = None,
     gene_panel_key: str | None = None,
-    overlap_key: str | None = OVERLAP_KEY,
+    overlap_key: str | None = None,
     filter_to_overlap: bool = False,
     log1p: bool = True,
-    prefix: str = PREFIX,
 ) -> ln.Collection:
     """Harmonize one more study onto an existing Collection and version it.
 
+    Collection / overlap / output artifact keys default to ``output_keys(prefix)``.
     Gene panel is taken from gene_panel_key if given, otherwise from the first
     artifact already in the collection.
     """
+    keys = output_keys(prefix)
+    collection_key = collection_key or keys.collection
+    overlap_key = overlap_key or keys.overlap
     collection = ln.Collection.get(key=collection_key)
     print("appending to", collection.uid, collection.key)
 
@@ -310,7 +325,7 @@ def append_dataset(
 
     new_art = save_harmonized(
         harmonized,
-        key=spec.output_key(prefix),
+        key=spec.output_key(keys.prefix),
         description=spec.description
         or (
             f"{spec.source} appended to {collection_key}: "

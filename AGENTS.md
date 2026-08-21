@@ -19,13 +19,14 @@ Write the tracked script on the LaminDB instance (not in this repo). Keep it thi
 ```python
 import lamindb as ln
 from perturbation_modeling import train_feature_selection
-from perturbation_modeling.keys import COLLECTION_KEY, WEIGHTS_KEY, TRAIN_SUMMARY_KEY
+from perturbation_modeling.keys import output_keys
 
 ln.track()
-collection = ln.Collection.get(key=COLLECTION_KEY)
+keys = output_keys()  # or output_keys("my_run")
+collection = ln.Collection.get(key=keys.collection)
 weights, summary = train_feature_selection(collection)
-ln.Artifact.from_dataframe(weights.reset_index(), key=WEIGHTS_KEY).save()
-ln.Artifact.from_dataframe(summary, key=TRAIN_SUMMARY_KEY).save()
+ln.Artifact.from_dataframe(weights.reset_index(), key=keys.weights).save()
+ln.Artifact.from_dataframe(summary, key=keys.train_summary).save()
 ln.finish()
 ```
 
@@ -35,4 +36,4 @@ Put run-specific choices (which collection, how many steps, extra interpretation
 
 - Do not re-register `perturbation_modeling/*.py` as Transforms.
 - Do not duplicate `harmonize_anndata` inside a script "just this once."
-- Do not hardcode keys; use `perturbation_modeling.keys` or pass keys in.
+- Do not hardcode keys; use `output_keys(prefix)` or pass keys in.

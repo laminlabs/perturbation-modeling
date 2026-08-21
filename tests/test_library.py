@@ -21,7 +21,12 @@ from perturbation_modeling.compounds import normalize_compound as _norm
 from perturbation_modeling.enrichment import best_term_per_perturbation, short_term
 from perturbation_modeling.features import rank_perturbations, recurrent_genes
 from perturbation_modeling.harmonize import align_to_gene_panel
-from perturbation_modeling.keys import LABEL_COL, LINCS_UIDS, TAHOE_TEST_UID
+from perturbation_modeling.keys import (
+    LABEL_COL,
+    LINCS_UIDS,
+    TAHOE_TEST_UID,
+    output_keys,
+)
 
 
 def test_normalize_compound():
@@ -43,6 +48,35 @@ def test_top_genes_and_ranking():
     assert list(imatinib["gene"]) == ["EGFR", "TP53"]
     assert rank_perturbations(top, n=1) == ["dmso"]
     assert recurrent_genes(top, ["imatinib", "dmso"], n=2)
+
+
+def test_n_obs_without_n_obs_attr():
+    from perturbation_modeling.io import n_obs
+
+    class _Subset:
+        shape = (200_001, 10)
+        obs_names = pd.Index([str(i) for i in range(200_001)])
+
+    assert n_obs(_Subset()) == 200_001
+    adata = ad.AnnData(X=np.zeros((3, 1), dtype=np.float32))
+    assert n_obs(adata) == 3
+
+
+def test_harmonize_max_obs_cap():
+    adata = ad.AnnData(
+        X=np.arange(20, dtype=np.float32).reshape(5, 4),
+        obs=pd.DataFrame({"drug": ["Imatinib"] * 5}),
+        var=pd.DataFrame(index=["EGFR", "GAPDH", "ACTB", "TP53"]),
+    )
+    out = harmonize_anndata(
+        adata,
+        source="toy",
+        pert_col="drug",
+        gene_panel=pd.Index(["EGFR", "TP53"]),
+        max_obs=2,
+        log1p=False,
+    )
+    assert out.n_obs == 2
 
 
 def test_harmonize_filters_and_gene_panel():
@@ -105,6 +139,21 @@ def test_enrichment_helpers_and_report():
     )
     assert "imatinib" in text
     assert "Caveats" in text
+
+
+def test_output_keys_follow_prefix():
+    keys = output_keys("demo")
+    assert keys.collection == "demo/harmonized"
+    assert keys.overlap == "demo/compounds.csv"
+    assert keys.tahoe_harmonized == "demo/tahoe_harmonized.h5ad"
+    assert keys.weights == "demo/modlyn_perturbation_weights.parquet"
+    assert output_keys("demo/").collection == "demo/harmonized"
+    assert tahoe_spec().output_key("demo") == "demo/tahoe_harmonized.h5ad"
+    assert (
+        lincs_spec("lincs_phase2").output_key("demo")
+        == "demo/lincs_phase2_harmonized.h5ad"
+    )
+    assert tahoe_spec().output_key() == output_keys().tahoe_harmonized
 
 
 def test_dataset_specs_are_independent():
