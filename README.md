@@ -62,7 +62,7 @@ Extend the library when a step is reusable (a new gene-panel rule, another model
 
 ## Pipeline
 
-1. **Harmonize** any studies (Tahoe, LINCS, DRUG-seq, in-house) onto a shared `perturbation` label and gene panel → `Collection`
+1. **Harmonize** any studies (Tahoe, LINCS, DRUG-seq, in-house) onto a shared `pert_compound` label and gene panel → `Collection`
 2. **Train** a [modlyn](https://modlyn.lamin.ai/quickstart) `SimpleLogReg` on `MappedCollection`
 3. **Rank genes** per perturbation from classifier weights
 4. **Enrich** top genes (Enrichr) and write an interpretation report

@@ -38,7 +38,7 @@ LINCS_UIDS = {
     "lincs_phase1_delta": "QlcIPRMMk667dGwS0000",
 }
 
-LABEL_COL = "perturbation"
+LABEL_COL = "pert_compound"
 SOURCE_COL = "source"
 
 DEFAULT_GENE_SETS = [

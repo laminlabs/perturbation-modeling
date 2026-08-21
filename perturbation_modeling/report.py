@@ -10,6 +10,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from .keys import LABEL_COL
+
 if TYPE_CHECKING:
     import pandas as pd
 
@@ -17,7 +19,7 @@ if TYPE_CHECKING:
 def focus_perturbations(best_terms: pd.DataFrame, n: int = 8) -> list[str]:
     """Select the n perturbations with the strongest top Enrichr term."""
     ranked = best_terms.sort_values("Adjusted P-value").reset_index(drop=True)
-    return ranked.head(n)["perturbation"].astype(str).tolist()
+    return ranked.head(n)[LABEL_COL].astype(str).tolist()
 
 
 def train_line(summary: pd.DataFrame) -> str:
@@ -47,12 +49,12 @@ def evidence_sections(
         columns=[c for c in best_terms.columns if str(c).startswith("Unnamed")]
     )
     for pert in focus:
-        hit = best.loc[best["perturbation"] == pert]
+        hit = best.loc[best[LABEL_COL] == pert]
         if hit.empty:
             continue
         r = hit.iloc[0]
         genes = (
-            top_genes.loc[top_genes["perturbation"] == pert]
+            top_genes.loc[top_genes[LABEL_COL] == pert]
             .sort_values("rank")
             .head(top_n_genes)["gene"]
             .astype(str)

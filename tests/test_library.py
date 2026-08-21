@@ -21,7 +21,7 @@ from perturbation_modeling.compounds import normalize_compound as _norm
 from perturbation_modeling.enrichment import best_term_per_perturbation, short_term
 from perturbation_modeling.features import rank_perturbations, recurrent_genes
 from perturbation_modeling.harmonize import align_to_gene_panel
-from perturbation_modeling.keys import LINCS_UIDS, TAHOE_TEST_UID
+from perturbation_modeling.keys import LABEL_COL, LINCS_UIDS, TAHOE_TEST_UID
 
 
 def test_normalize_compound():
@@ -38,8 +38,8 @@ def test_top_genes_and_ranking():
         index=["imatinib", "dmso"],
     )
     top = top_genes_from_weights(weights, n=2)
-    assert list(top.columns) == ["perturbation", "rank", "gene", "weight"]
-    imatinib = top.loc[top["perturbation"] == "imatinib"].sort_values("rank")
+    assert list(top.columns) == [LABEL_COL, "rank", "gene", "weight"]
+    imatinib = top.loc[top[LABEL_COL] == "imatinib"].sort_values("rank")
     assert list(imatinib["gene"]) == ["EGFR", "TP53"]
     assert rank_perturbations(top, n=1) == ["dmso"]
     assert recurrent_genes(top, ["imatinib", "dmso"], n=2)
@@ -59,7 +59,7 @@ def test_harmonize_filters_and_gene_panel():
         allowed_compounds={"imatinib", "dmso"},
         log1p=False,
     )
-    assert list(out.obs["perturbation"]) == ["imatinib", "dmso"]
+    assert list(out.obs[LABEL_COL]) == ["imatinib", "dmso"]
     assert list(out.obs["source"]) == ["toy", "toy"]
     assert list(out.var_names) == ["TP53", "EGFR"]
 
@@ -79,14 +79,14 @@ def test_enrichment_helpers_and_report():
     assert short_term("apoptosis (GO:0006915)").startswith("apoptosis")
     enrichment = pd.DataFrame(
         {
-            "perturbation": ["imatinib", "imatinib", "dmso"],
+            LABEL_COL: ["imatinib", "imatinib", "dmso"],
             "Gene_set": ["Hallmark", "Hallmark", "Hallmark"],
             "Term": ["KRAS", "APOPTOSIS", "MITOSIS"],
             "Adjusted P-value": [0.02, 0.001, 0.05],
         }
     )
     best = best_term_per_perturbation(enrichment)
-    imatinib = best.loc[best["perturbation"] == "imatinib"].iloc[0]
+    imatinib = best.loc[best[LABEL_COL] == "imatinib"].iloc[0]
     assert imatinib["Term"] == "APOPTOSIS"
 
     summary = pd.DataFrame(
@@ -94,7 +94,7 @@ def test_enrichment_helpers_and_report():
     )
     top = pd.DataFrame(
         {
-            "perturbation": ["imatinib", "imatinib", "dmso"],
+            LABEL_COL: ["imatinib", "imatinib", "dmso"],
             "rank": [1, 2, 1],
             "gene": ["EGFR", "TP53", "GAPDH"],
             "weight": [3.0, 1.0, 4.0],
@@ -268,5 +268,5 @@ def test_harmonize_external_pert_series():
         log1p=False,
         pert=pert,
     )
-    assert list(out.obs["perturbation"]) == ["imatinib", "dmso"]
+    assert list(out.obs[LABEL_COL]) == ["imatinib", "dmso"]
     assert list(out.var_names) == ["EGFR", "TP53"]
