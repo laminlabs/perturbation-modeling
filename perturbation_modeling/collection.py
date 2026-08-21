@@ -13,6 +13,7 @@ from .harmonize import gene_symbols, harmonize_anndata
 from .io import close_backed, open_study
 from .keys import (
     COLLECTION_KEY,
+    LABEL_COL,
     LINCS_UIDS,
     OVERLAP_KEY,
     PREFIX,
@@ -149,7 +150,7 @@ def load_overlap_compounds(key: str = OVERLAP_KEY) -> set[str] | None:
     if art is None:
         return None
     df = art.load()
-    col = "perturbation" if "perturbation" in df.columns else df.columns[0]
+    col = LABEL_COL if LABEL_COL in df.columns else df.columns[0]
     return set(df[col].astype(str)) - {""}
 
 
@@ -228,7 +229,7 @@ def build_collection(
                 log1p=log1p,
                 pert=pert,
             )
-            kept_compounds.update(harmonized.obs["perturbation"].astype(str))
+            kept_compounds.update(harmonized.obs[LABEL_COL].astype(str))
             artifacts.append(
                 save_harmonized(
                     harmonized,
@@ -244,7 +245,7 @@ def build_collection(
     if overlap_key is not None:
         compounds = sorted(kept_compounds - {""})
         ln.Artifact.from_dataframe(
-            pd.DataFrame({"perturbation": compounds}),
+            pd.DataFrame({LABEL_COL: compounds}),
             key=overlap_key,
             description=f"Compounds in {collection_key} ({len(compounds)} names)",
         ).save()

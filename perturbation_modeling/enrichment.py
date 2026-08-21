@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pandas as pd
 
-from .keys import DEFAULT_GENE_SETS
+from .keys import DEFAULT_GENE_SETS, LABEL_COL
 
 _KEEP_COLS = (
-    "perturbation",
+    LABEL_COL,
     "Gene_set",
     "Term",
     "Overlap",
@@ -45,14 +45,10 @@ def enrich_top_genes(
     import gseapy as gp
 
     gene_sets = gene_sets or list(DEFAULT_GENE_SETS)
-    perts = perturbations or top_genes["perturbation"].astype(str).unique().tolist()
+    perts = perturbations or top_genes[LABEL_COL].astype(str).unique().tolist()
     rows: list[pd.DataFrame] = []
     for pert in perts:
-        genes = (
-            top_genes.loc[top_genes["perturbation"] == pert, "gene"]
-            .astype(str)
-            .tolist()
-        )
+        genes = top_genes.loc[top_genes[LABEL_COL] == pert, "gene"].astype(str).tolist()
         try:
             enr = gp.enrichr(
                 gene_list=genes,
@@ -67,7 +63,7 @@ def enrich_top_genes(
             continue
         if res is None or res.empty:
             continue
-        res.insert(0, "perturbation", pert)
+        res.insert(0, LABEL_COL, pert)
         rows.append(res)
         print(pert, "hits", len(res))
 
@@ -77,7 +73,7 @@ def enrich_top_genes(
     enrichment = pd.concat(rows, ignore_index=True)
     keep = [c for c in _KEEP_COLS if c in enrichment.columns]
     return enrichment[keep].sort_values(
-        ["perturbation", "Adjusted P-value"], ascending=[True, True]
+        [LABEL_COL, "Adjusted P-value"], ascending=[True, True]
     )
 
 
@@ -85,6 +81,6 @@ def best_term_per_perturbation(enrichment: pd.DataFrame) -> pd.DataFrame:
     """Lowest adjusted-p term for each perturbation."""
     return (
         enrichment.sort_values("Adjusted P-value")
-        .groupby("perturbation", as_index=False)
+        .groupby(LABEL_COL, as_index=False)
         .first()
     )

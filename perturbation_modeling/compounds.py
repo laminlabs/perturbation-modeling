@@ -13,7 +13,7 @@ def normalize_compound(name: object) -> str:
     """Lowercase, strip salt/form in parentheses, collapse whitespace.
 
     Used to join Tahoe drug, LINCS pert_compound, and in-house labels
-    onto a shared perturbation column.
+    onto a shared pert_compound column.
     """
     if name is None or (isinstance(name, float) and pd.isna(name)):
         return ""

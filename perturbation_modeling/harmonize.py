@@ -8,6 +8,7 @@ import pandas as pd
 
 from .compounds import normalize_compound
 from .io import to_memory_adata
+from .keys import LABEL_COL, SOURCE_COL
 
 if TYPE_CHECKING:
     import anndata as ad
@@ -65,15 +66,15 @@ def harmonize_anndata(
     allowed_compounds: set[str] | None = None,
     max_obs: int | None = None,
     log1p: bool = True,
-    label_col: str = "perturbation",
-    source_col: str = "source",
+    label_col: str = LABEL_COL,
+    source_col: str = SOURCE_COL,
     pert: pd.Series | None = None,
 ) -> ad.AnnData:
     """Align one study to the collection schema.
 
     Steps: filter to labeled / overlapping compounds, optional obs cap, map
     symbol_col onto var_names, subset to gene_panel, write
-    perturbation + source, optional log1p.
+    pert_compound + source, optional log1p.
 
     pert can be passed from a curated obs.parquet when adata.obs has no
     pert_compound column.
