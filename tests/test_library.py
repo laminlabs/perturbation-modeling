@@ -45,6 +45,35 @@ def test_top_genes_and_ranking():
     assert recurrent_genes(top, ["imatinib", "dmso"], n=2)
 
 
+def test_n_obs_without_n_obs_attr():
+    from perturbation_modeling.io import n_obs
+
+    class _Subset:
+        shape = (200_001, 10)
+        obs_names = pd.Index([str(i) for i in range(200_001)])
+
+    assert n_obs(_Subset()) == 200_001
+    adata = ad.AnnData(X=np.zeros((3, 1), dtype=np.float32))
+    assert n_obs(adata) == 3
+
+
+def test_harmonize_max_obs_cap():
+    adata = ad.AnnData(
+        X=np.arange(20, dtype=np.float32).reshape(5, 4),
+        obs=pd.DataFrame({"drug": ["Imatinib"] * 5}),
+        var=pd.DataFrame(index=["EGFR", "GAPDH", "ACTB", "TP53"]),
+    )
+    out = harmonize_anndata(
+        adata,
+        source="toy",
+        pert_col="drug",
+        gene_panel=pd.Index(["EGFR", "TP53"]),
+        max_obs=2,
+        log1p=False,
+    )
+    assert out.n_obs == 2
+
+
 def test_harmonize_filters_and_gene_panel():
     adata = ad.AnnData(
         X=np.arange(12, dtype=np.float32).reshape(3, 4),

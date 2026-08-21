@@ -43,6 +43,17 @@ def open_study(uid_or_key: str) -> tuple[ln.Artifact, Any, Any | None]:
     return x_art, x_art.open(), obs_out
 
 
+def n_obs(adata: Any) -> int:
+    """Observation count for AnnData or a lamindb accessor / subset.
+
+    ``AnnDataAccessorSubset`` has ``shape`` but not ``n_obs``.
+    """
+    n = getattr(adata, "n_obs", None)
+    if n is not None:
+        return int(n)
+    return int(adata.shape[0])
+
+
 def close_backed(adata: Any) -> None:
     """Close a backed AnnData / accessor if it still holds a file handle."""
     if getattr(adata, "isbacked", False) and getattr(adata, "file", None) is not None:
