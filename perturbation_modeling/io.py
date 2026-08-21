@@ -6,6 +6,7 @@ from typing import Any
 
 import anndata as ad
 import lamindb as ln
+import pandas as pd
 
 
 def get_artifact(uid_or_key: str) -> ln.Artifact:
@@ -41,6 +42,15 @@ def open_study(uid_or_key: str) -> tuple[ln.Artifact, Any, Any | None]:
         )
     obs_out = obs_art if obs_art is not None and obs_art is not x_art else None
     return x_art, x_art.open(), obs_out
+
+
+def var_names_from_artifact(art: ln.Artifact) -> pd.Index:
+    """Gene symbols from an AnnData artifact without loading the matrix."""
+    adata = art.open()
+    try:
+        return pd.Index(adata.var_names.astype(str)).copy()
+    finally:
+        close_backed(adata)
 
 
 def n_obs(adata: Any) -> int:

@@ -1,6 +1,7 @@
 """Default LaminDB artifact keys for the perturbation-modeling instance.
 
-Override these in a transform when working on a different instance or prefix.
+Pass a prefix to ``output_keys`` (or ``build_collection(..., prefix=...)``) when
+a run should write under a different folder than ``pert_modeling/``.
 
 Tahoe: TAHOE_TEST_* is the small shard_0.h5ad used in tests and the exemplar
 (uncurated; obs column is drug). Curated plates on laminlabs/pertdata use
@@ -9,18 +10,56 @@ tahoe100m/2025-02-25/plate14_filt_Vevo_Tahoe100M_WServicesFrom_ParseGigalab/obs.
 (see tahoe_artifact_key).
 """
 
+from dataclasses import dataclass
+
 PREFIX = "pert_modeling"
 
-COLLECTION_KEY = f"{PREFIX}/harmonized"
-OVERLAP_KEY = f"{PREFIX}/compounds.csv"
-TAHOE_HARMONIZED_KEY = f"{PREFIX}/tahoe_harmonized.h5ad"
 
-WEIGHTS_KEY = f"{PREFIX}/modlyn_perturbation_weights.parquet"
-TRAIN_SUMMARY_KEY = f"{PREFIX}/modlyn_train_summary.csv"
-TOP_GENES_KEY = f"{PREFIX}/modlyn_top_genes.csv"
-ENRICHMENT_KEY = f"{PREFIX}/modlyn_gene_module_enrichment.csv"
-TOP_TERM_KEY = f"{PREFIX}/modlyn_enrichment_top_term.csv"
-REPORT_KEY = f"{PREFIX}/modlyn_interpretation_report.md"
+@dataclass(frozen=True)
+class OutputKeys:
+    """Artifact / collection keys for one run, all under ``prefix/``."""
+
+    prefix: str
+    collection: str
+    overlap: str
+    tahoe_harmonized: str
+    weights: str
+    train_summary: str
+    top_genes: str
+    enrichment: str
+    top_term: str
+    report: str
+
+
+def output_keys(prefix: str = PREFIX) -> OutputKeys:
+    """Keys for output artifacts and the Collection under ``prefix/``."""
+    prefix = prefix.strip().strip("/")
+    if not prefix:
+        raise ValueError("prefix must be a non-empty path, e.g. 'pert_modeling'")
+    return OutputKeys(
+        prefix=prefix,
+        collection=f"{prefix}/harmonized",
+        overlap=f"{prefix}/compounds.csv",
+        tahoe_harmonized=f"{prefix}/tahoe_harmonized.h5ad",
+        weights=f"{prefix}/modlyn_perturbation_weights.parquet",
+        train_summary=f"{prefix}/modlyn_train_summary.csv",
+        top_genes=f"{prefix}/modlyn_top_genes.csv",
+        enrichment=f"{prefix}/modlyn_gene_module_enrichment.csv",
+        top_term=f"{prefix}/modlyn_enrichment_top_term.csv",
+        report=f"{prefix}/modlyn_interpretation_report.md",
+    )
+
+
+_DEFAULT = output_keys()
+COLLECTION_KEY = _DEFAULT.collection
+OVERLAP_KEY = _DEFAULT.overlap
+TAHOE_HARMONIZED_KEY = _DEFAULT.tahoe_harmonized
+WEIGHTS_KEY = _DEFAULT.weights
+TRAIN_SUMMARY_KEY = _DEFAULT.train_summary
+TOP_GENES_KEY = _DEFAULT.top_genes
+ENRICHMENT_KEY = _DEFAULT.enrichment
+TOP_TERM_KEY = _DEFAULT.top_term
+REPORT_KEY = _DEFAULT.report
 
 # Small Tahoe-100M shard for tests / the exemplar instance (~7 GB, shard_0).
 TAHOE_TEST_UID = "ipI9MJQ5Jn6URPQv0000"

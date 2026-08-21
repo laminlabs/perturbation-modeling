@@ -21,7 +21,12 @@ from perturbation_modeling.compounds import normalize_compound as _norm
 from perturbation_modeling.enrichment import best_term_per_perturbation, short_term
 from perturbation_modeling.features import rank_perturbations, recurrent_genes
 from perturbation_modeling.harmonize import align_to_gene_panel
-from perturbation_modeling.keys import LABEL_COL, LINCS_UIDS, TAHOE_TEST_UID
+from perturbation_modeling.keys import (
+    LABEL_COL,
+    LINCS_UIDS,
+    TAHOE_TEST_UID,
+    output_keys,
+)
 
 
 def test_normalize_compound():
@@ -93,6 +98,59 @@ def test_harmonize_filters_and_gene_panel():
     assert list(out.var_names) == ["TP53", "EGFR"]
 
 
+def test_resolve_symbol_col_from_var():
+    from perturbation_modeling.harmonize import resolve_symbol_col
+
+    panel = pd.Index(["EGFR", "TP53"])
+    symbols = ad.AnnData(
+        X=np.zeros((1, 3), dtype=np.float32),
+        obs=pd.DataFrame({"drug": ["a"]}),
+        var=pd.DataFrame(index=["EGFR", "GAPDH", "TP53"]),
+    )
+    assert resolve_symbol_col(symbols, panel) is None
+
+    ensembl = ad.AnnData(
+        X=np.zeros((1, 3), dtype=np.float32),
+        obs=pd.DataFrame({"drug": ["a"]}),
+        var=pd.DataFrame(
+            {"gene_name": ["EGFR", "GAPDH", "TP53"]},
+            index=["ENSG1", "ENSG2", "ENSG3"],
+        ),
+    )
+    assert resolve_symbol_col(ensembl, panel) == "gene_name"
+
+    no_match = ad.AnnData(
+        X=np.zeros((1, 2), dtype=np.float32),
+        obs=pd.DataFrame({"drug": ["a"]}),
+        var=pd.DataFrame(index=["ENSG1", "ENSG2"]),
+    )
+    try:
+        resolve_symbol_col(no_match, panel)
+    except RuntimeError as e:
+        assert "Pass symbol_col" in str(e)
+    else:
+        raise AssertionError("expected RuntimeError")
+
+
+def test_harmonize_uses_symbol_column():
+    adata = ad.AnnData(
+        X=np.arange(6, dtype=np.float32).reshape(2, 3),
+        obs=pd.DataFrame({"drug": ["Imatinib", "DMSO"]}),
+        var=pd.DataFrame(
+            {"gene_name": ["EGFR", "GAPDH", "TP53"]},
+            index=["ENSG1", "ENSG2", "ENSG3"],
+        ),
+    )
+    out = harmonize_anndata(
+        adata,
+        source="drug-seq",
+        pert_col="drug",
+        gene_panel=pd.Index(["TP53", "EGFR"]),
+        log1p=False,
+    )
+    assert list(out.var_names) == ["TP53", "EGFR"]
+
+
 def test_align_duplicate_var_names():
     adata = ad.AnnData(
         X=np.array([[1.0, 9.0, 2.0]], dtype=np.float32),
@@ -136,6 +194,21 @@ def test_enrichment_helpers_and_report():
     assert "Caveats" in text
 
 
+def test_output_keys_follow_prefix():
+    keys = output_keys("demo")
+    assert keys.collection == "demo/harmonized"
+    assert keys.overlap == "demo/compounds.csv"
+    assert keys.tahoe_harmonized == "demo/tahoe_harmonized.h5ad"
+    assert keys.weights == "demo/modlyn_perturbation_weights.parquet"
+    assert output_keys("demo/").collection == "demo/harmonized"
+    assert tahoe_spec().output_key("demo") == "demo/tahoe_harmonized.h5ad"
+    assert (
+        lincs_spec("lincs_phase2").output_key("demo")
+        == "demo/lincs_phase2_harmonized.h5ad"
+    )
+    assert tahoe_spec().output_key() == output_keys().tahoe_harmonized
+
+
 def test_dataset_specs_are_independent():
     t = tahoe_spec(max_obs=1000)
     assert t.source == "tahoe"
@@ -174,8 +247,13 @@ def test_dataset_specs_are_independent():
 def test_overlap_compounds_one_or_many():
     a = pd.Series(["Imatinib (mesylate)", "DMSO"])
     b = pd.Series(["imatinib", "vehicle"])
+    c = pd.Series(["dmso", "vehicle"])
     assert overlap_compounds(a) == ["dmso", "imatinib"]
     assert overlap_compounds(a, b) == ["imatinib"]
+    # First ∩ union(rest): keep names in Tahoe that appear in any LINCS phase.
+    assert overlap_compounds(a, b, c) == ["dmso", "imatinib"]
+    # Intersection of every series is empty here (no name in a, b, and c).
+    assert overlap_compounds(a, b, c, how="all") == []
 
 
 class _FakeMembers:

@@ -4,7 +4,7 @@ Python library for cross-study **perturbation transcriptomics**: harmonize compo
 
 Import it like any other scientific package. Tracked scripts that call it (written by you or by an agent) live on the LaminDB instance — not in this repo.
 
-**Exemplar instance:** [laminlabs/perturbation-modeling](https://lamin.ai/laminlabs/perturbation-modeling)
+**Exemplar instance (optional):** [laminlabs/perturbation-modeling](https://lamin.ai/laminlabs/perturbation-modeling)
 
 ## Install
 
@@ -12,7 +12,17 @@ Import it like any other scientific package. Tracked scripts that call it (writt
 pip install -e ".[train,enrich]"
 ```
 
-Connect LaminDB to `laminlabs/perturbation-modeling` or your own instance.
+Connect LaminDB to **your** instance, then point that instance at the folder
+that holds the tracked scripts:
+
+```bash
+lamin connect <owner/name>
+cd /path/to/your/scripts
+lamin settings set dev-dir .
+```
+
+The library does not pin an instance. An optional public exemplar is
+[laminlabs/perturbation-modeling](https://lamin.ai/laminlabs/perturbation-modeling).
 
 ## Usage
 
@@ -30,8 +40,10 @@ from perturbation_modeling import (
 )
 
 ln.track()
-# Test shard (default) + LINCS, compounds restricted to the intersection:
+# Test shard (default) + LINCS, compounds in Tahoe that also appear in any LINCS phase:
 build_collection([tahoe_spec(), *lincs_specs()])
+# Same pipeline under a different key prefix:
+# build_collection([tahoe_spec(), *lincs_specs()], prefix="my_run")
 # Production Tahoe plate (Arc / Vevo), no obs cap:
 # from perturbation_modeling import tahoe_artifact_key
 # build_collection([tahoe_spec(uid_or_key=tahoe_artifact_key(14), max_obs=None)])
@@ -49,12 +61,13 @@ Train on whatever collection you saved:
 ```python
 import lamindb as ln
 from perturbation_modeling import train_feature_selection
-from perturbation_modeling.keys import COLLECTION_KEY, WEIGHTS_KEY
+from perturbation_modeling.keys import output_keys
 
 ln.track()
-collection = ln.Collection.get(key=COLLECTION_KEY)
+keys = output_keys()  # or output_keys("my_run")
+collection = ln.Collection.get(key=keys.collection)
 weights, summary = train_feature_selection(collection)
-ln.Artifact.from_dataframe(weights.reset_index(), key=WEIGHTS_KEY).save()
+ln.Artifact.from_dataframe(weights.reset_index(), key=keys.weights).save()
 ln.finish()
 ```
 
@@ -84,6 +97,6 @@ Append a study with `append_dataset(DatasetSpec(...))` and retrain — no rebuil
 | Enrichr on those genes                      | `enrich_top_genes`, `best_term_per_perturbation`         |
 | Evidence markdown                           | `build_evidence_report`                                  |
 
-Default artifact keys are in `perturbation_modeling.keys`. Override them in your script if the instance uses a different prefix.
+Default artifact keys are in `perturbation_modeling.keys`. Call `output_keys("my_run")` (or `build_collection(..., prefix="my_run")`) to write under a different prefix.
 
 Coding agents should follow [AGENTS.md](AGENTS.md) so they import this library instead of copying pipeline logic into one-off scripts.
